@@ -1,0 +1,40 @@
+# 📋 Project To-Do List: SimpleNotes
+
+- [ ] Create a new Spring Boot project (start.spring.io)
+- [ ] Add dependencies: Spring Web, Spring Data JPA, PostgreSQL Driver, Lombok
+- [ ] Configure application.properties (DB URL, Hibernate, server port)
+- [ ] Create local PostgreSQL database and test the connection
+- [ ] Create a test REST endpoint (/hello) to verify the setup
+- [ ] Create Reminder entity (id, text, timestamp, interval, active)
+- [ ] Create ReminderDTO (input/output)
+- [ ] Implement ReminderMapper (or configure MapStruct)
+- [ ] Create ReminderRepository (extends JpaRepository)
+- [ ] Implement ReminderService with create, getById, listAll, delete
+- [ ] Create ReminderController with REST endpoints (POST, GET, DELETE)
+- [ ] Write unit tests for ReminderService
+- [ ] Create ReminderScheduler class with @Scheduled
+- [ ] Query database for due reminders (timestamp < now AND active = true)
+- [ ] Print reminder to console (placeholder for future notification)
+- [ ] Handle one-time vs recurring reminders (deactivate or calculate next timestamp)
+- [ ] Write unit tests for ReminderScheduler logic
+- [ ] Create Note entity (id, title, content, createdAt, tags)
+- [ ] Create NoteDTO (input/output)
+- [ ] Implement NoteMapper
+- [ ] Create NoteRepository
+- [ ] Implement NoteService with create, update, delete, listAll
+- [ ] Create NoteController with REST endpoints (POST, GET, PUT, DELETE)
+- [ ] Write unit tests for NoteService
+- [ ] Add search endpoint for notes (/api/notes/search?q=...)
+- [ ] Implement search in title and content
+- [ ] Add tag support to Note entity (List<String> or Tag entity)
+- [ ] Add endpoint to filter notes by tag (/api/notes/by-tag?tag=...)
+- [ ] Add controller-level tests (e.g., with MockMVC)
+- [ ] Implement global error handling with @ControllerAdvice
+- [ ] Add validation annotations to DTOs (e.g., @NotBlank, @Valid)
+- [ ] Ensure fallback/defaults for new fields like color or viewMode
+- [ ] (Optional) Add semantic search (e.g., synonyms or vector similarity)
+- [ ] (Optional) Add user accounts and JWT authentication
+- [ ] (Optional) Ensure users can only access their own reminders/notes
+- [ ] (Optional) Add note sharing & collaboration logic
+- [ ] (Optional) Build basic web frontend (e.g., React or Thymeleaf)
+- [ ] (Optional) Build Android client (e.g., React Native or Kotlin Compose)
