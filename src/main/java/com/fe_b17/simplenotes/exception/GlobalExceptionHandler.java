@@ -12,12 +12,16 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+
+    @ExceptionHandler(NoSuchNoteException.class)
+    public ResponseEntity<String> handleNoSuchNoteException(NoSuchNoteException ex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String,String>> handleValidationExceptionErrors(MethodArgumentNotValidException ex){
         Map<String,String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> {
-            errors.put(error.getField(), error.getDefaultMessage());
-        });
+        ex.getBindingResult().getFieldErrors().forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(errors);
     }
 

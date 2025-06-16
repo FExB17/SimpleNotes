@@ -11,17 +11,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/auth")
 public class AuthController {
 
     private final UserService userService;
 
-    @PostMapping("/auth/login")
+    @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody LoginRequest dto) {
         String successMsg = userService.login(dto);
         return ResponseEntity.ok(successMsg);
     }
 
-    @PostMapping("/auth/register")
+    @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest dto) {
         userService.registerUser(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body("user registered successfully");

@@ -9,7 +9,6 @@ import com.fe_b17.simplenotes.exception.NoSuchAccountException;
 import com.fe_b17.simplenotes.models.User;
 import com.fe_b17.simplenotes.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepo userRepo;
-    private final PasswordEncoder encoder;
+    private final PasswordService encoder;
 
     public void registerUser(RegisterRequest dto){
         if (userRepo.existsByEmail(dto.email())) {
@@ -28,7 +27,7 @@ public class UserService {
         User user = new User();
         user.setEmail(dto.email());
         user.setUsername(dto.username());
-        user.setPassword(encoder.encode(dto.password()));
+        user.setPassword(encoder.hashPassword(dto.password()));
         userRepo.save(user);
     }
 
@@ -36,7 +35,7 @@ public class UserService {
         User user = userRepo.findByEmail(dto.email())
                 .orElseThrow(NoSuchAccountException::new);
 
-       if (!encoder.matches(dto.password(), user.getPassword())){
+       if (!encoder.checkPassword(dto.password(), user.getPassword())){
             throw new LoginFailedException();
        }
 
