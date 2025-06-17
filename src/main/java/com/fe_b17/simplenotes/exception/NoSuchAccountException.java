@@ -3,6 +3,6 @@ package com.fe_b17.simplenotes.exception;
 public class NoSuchAccountException extends RuntimeException {
 
     public NoSuchAccountException() {
-        super("Note does not exist");
+        super("Account does not exist");
     }
 }

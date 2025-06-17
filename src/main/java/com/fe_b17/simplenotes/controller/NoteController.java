@@ -2,6 +2,7 @@ package com.fe_b17.simplenotes.controller;
 
 import com.fe_b17.simplenotes.dto.NoteRequest;
 import com.fe_b17.simplenotes.dto.NoteResponse;
+import com.fe_b17.simplenotes.mapper.NoteMapper;
 import com.fe_b17.simplenotes.models.Note;
 import com.fe_b17.simplenotes.service.NoteService;
 import jakarta.validation.Valid;
@@ -19,35 +20,30 @@ import java.util.UUID;
 public class NoteController {
 
     private final NoteService noteService;
+    private final NoteMapper noteMapper;
 
     @PostMapping
     public ResponseEntity<NoteResponse> addNote(@Valid @RequestBody NoteRequest dto){
         Note note = noteService.createNote(dto);
-        NoteResponse noteResponse = new NoteResponse(
-                note.getId(),
-                note.getTitle(),
-                note.getContent(),
-                note.getCreatedAt());
-        return ResponseEntity.status(HttpStatus.CREATED).body(noteResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(noteMapper.toResponse(note));
     }
 
     @GetMapping
-    public ResponseEntity<List<NoteResponse>> getNotes(){
-        List<Note> notes = noteService.getAllNotes();
-        List<NoteResponse> dto = notes.stream()
-                .map(note -> new NoteResponse(
-                        note.getId(),
-                        note.getTitle(),
-                        note.getContent(),
-                        note.getCreatedAt()))
-                .toList();
-        return ResponseEntity.ok(dto);
+    public ResponseEntity<List<NoteResponse>> getAllNotes(){
+        List<Note> notes = noteService.getNotesForCurrentUser();
+        return ResponseEntity.ok(noteMapper.toResponseList(notes));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<NoteResponse> getNote(@PathVariable UUID id){
+        Note note = noteService.getNote(id);
+        return ResponseEntity.ok( noteMapper.toResponse(note));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Note> updateNote(@RequestBody NoteRequest dto, @PathVariable UUID id){
+    public ResponseEntity<NoteResponse> updateNote(@RequestBody NoteRequest dto, @PathVariable UUID id){
         Note updated = noteService.updateNote(dto,id);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(noteMapper.toResponse(updated));
     }
 
     @DeleteMapping("/{id}")

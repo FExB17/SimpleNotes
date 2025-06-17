@@ -3,12 +3,12 @@ package com.fe_b17.simplenotes.service;
 import com.fe_b17.simplenotes.dto.NoteRequest;
 import com.fe_b17.simplenotes.exception.NoSuchNoteException;
 import com.fe_b17.simplenotes.models.Note;
+import com.fe_b17.simplenotes.models.User;
 import com.fe_b17.simplenotes.repo.NoteRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 
@@ -17,31 +17,46 @@ import java.util.UUID;
 public class NoteService {
 
     private final NoteRepo noteRepo;
+    private final UserService userService;
 
-
-public Note createNote(NoteRequest noteRequest){
+    public Note createNote(NoteRequest noteRequest){
+    User currentUser = userService.getCurrentUser();
     Note note = new Note();
     note.setTitle(noteRequest.title());
     note.setContent(noteRequest.content());
+    note.setUser(currentUser);
     return noteRepo.save(note);
+
 }
 
-
-    public List<Note> getAllNotes() {
-        return noteRepo.findAll();
-    }
-
     public Note updateNote(NoteRequest dto, UUID id) {
-        Note note = noteRepo.findById(id).orElseThrow(NoSuchElementException::new);
+        User currentUser = userService.getCurrentUser();
+        Note note = noteRepo.findById(id)
+                .filter(n -> n.getUser().getId().equals(currentUser.getId()))
+                .orElseThrow(NoSuchNoteException::new);
+
         note.setTitle(dto.title());
         note.setContent(dto.content());
-        return noteRepo.save(note);
+        return noteRepo.save(note); // gibt die note inklusive dem user und allen Daten mit passwort wieder
     }
 
     public void deleteNote(UUID id) {
-    if(!noteRepo.existsById(id)){
-        throw new NoSuchNoteException();
+        User currentUser = userService.getCurrentUser();
+        Note note = noteRepo.findById(id)
+                .filter(n -> n.getUser().getId().equals(currentUser.getId()))
+                .orElseThrow(NoSuchNoteException::new);
+        noteRepo.delete(note);
     }
-        noteRepo.deleteById(id);
+
+    public List<Note> getNotesForCurrentUser(){
+    UUID userID = userService.getCurrentUser().getId();
+    return noteRepo.findByUserId(userID);
+}
+
+    public Note getNote(UUID id) {
+        User currentUser = userService.getCurrentUser();
+         return noteRepo.findById(id)
+                 .filter(n -> n.getUser().getId().equals(currentUser.getId()))
+                 .orElseThrow(NoSuchNoteException::new);
     }
 }

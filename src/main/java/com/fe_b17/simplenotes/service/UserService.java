@@ -38,7 +38,11 @@ public class UserService {
        if (!encoder.checkPassword(dto.password(), user.getPassword())){
             throw new LoginFailedException();
        }
-
         return "Login successfull " + user.getEmail();
+    }
+
+    public User getCurrentUser(){
+        return userRepo.findByEmail("alice2@example.com")
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }
