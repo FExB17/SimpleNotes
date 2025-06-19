@@ -30,7 +30,7 @@ public class NoteController {
 
     @GetMapping
     public ResponseEntity<List<NoteResponse>> getAllNotes(){
-        List<Note> notes = noteService.getNotesForCurrentUser();
+        List<Note> notes = noteService.getAllNotes();
         return ResponseEntity.ok(noteMapper.toResponseList(notes));
     }
 
@@ -50,6 +50,12 @@ public class NoteController {
     public ResponseEntity<String> deleteNote(@PathVariable UUID id){
         noteService.deleteNote(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<NoteResponse>> searchNotes(@RequestParam String q){
+        List<Note> notes = noteService.searchNotes(q);
+        return ResponseEntity.ok(noteMapper.toResponseList(notes));
     }
 
 }

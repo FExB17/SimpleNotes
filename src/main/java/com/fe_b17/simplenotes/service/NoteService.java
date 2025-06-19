@@ -48,9 +48,9 @@ public class NoteService {
         noteRepo.delete(note);
     }
 
-    public List<Note> getNotesForCurrentUser(){
+    public List<Note> getAllNotes(){
     UUID userID = userService.getCurrentUser().getId();
-    return noteRepo.findByUserId(userID);
+    return noteRepo.findAllByUserId(userID);
 }
 
     public Note getNote(UUID id) {
@@ -58,5 +58,10 @@ public class NoteService {
          return noteRepo.findById(id)
                  .filter(n -> n.getUser().getId().equals(currentUser.getId()))
                  .orElseThrow(NoSuchNoteException::new);
+    }
+
+    public List<Note> searchNotes(String q) {
+        UUID userID = userService.getCurrentUser().getId();
+        return noteRepo.searchByTitleOrContent(q, userID);
     }
 }
