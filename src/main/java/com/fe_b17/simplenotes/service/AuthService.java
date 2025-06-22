@@ -1,19 +1,20 @@
 package com.fe_b17.simplenotes.service;
 
-import com.fe_b17.simplenotes.dto.AuthResponse;
-import com.fe_b17.simplenotes.dto.LoginRequest;
-import com.fe_b17.simplenotes.dto.RegisterRequest;
-import com.fe_b17.simplenotes.dto.SessionResponse;
+import com.fe_b17.simplenotes.dto.*;
 import com.fe_b17.simplenotes.exception.EmailAlreadyExistsException;
 import com.fe_b17.simplenotes.exception.LoginFailedException;
 import com.fe_b17.simplenotes.mapper.SessionMapper;
 import com.fe_b17.simplenotes.mapper.UserMapper;
+import com.fe_b17.simplenotes.models.RefreshToken;
+import com.fe_b17.simplenotes.models.Session;
 import com.fe_b17.simplenotes.models.User;
+import com.fe_b17.simplenotes.repo.RefreshTokenRepo;
 import com.fe_b17.simplenotes.repo.UserRepo;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,8 +30,9 @@ public class AuthService {
     private final UserMapper userMapper;
     private final SessionService sessionService;
     private final UserService userService;
+    private final RefreshTokenRepo refreshTokenRepo;
 
-    public AuthResponse registerUser(RegisterRequest dto,  HttpServletRequest request) {
+    public AuthResponse registerUser(RegisterRequest dto, HttpServletRequest request) {
         if (userRepo.existsByEmail(dto.email())) {
             throw new EmailAlreadyExistsException(dto.email());
         }
@@ -46,18 +48,21 @@ public class AuthService {
 
         Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent);
 
+        RefreshToken refreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
+
         return new AuthResponse(
                 (String) tokenData.get("token"),
+                refreshToken.getId().toString(),
                 (Long) tokenData.get("expiresAt"),
                 userMapper.toResponse(user)
-                );
+        );
     }
 
     public AuthResponse login(LoginRequest dto, HttpServletRequest request) {
         User user = userRepo.findByEmail(dto.email())
-                .orElseThrow(LoginFailedException::new); //um keine emails preiszugeben
+                .orElseThrow(LoginFailedException::new); //um keine E-Mails preiszugeben
 
-        if (!encoder.checkPassword(dto.password(), user.getPassword())){
+        if (!encoder.checkPassword(dto.password(), user.getPassword())) {
             throw new LoginFailedException();
         }
 
@@ -66,9 +71,17 @@ public class AuthService {
 
         Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent);
 
+        RefreshToken refreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
+
+        String refreshTokenId = refreshToken.getId().toString();
+        String accessToken = (String) tokenData.get("token");
+        Long expiresAt = (Long) tokenData.get("expiresAt");
+
+
         return new AuthResponse(
-                (String) tokenData.get("token"),
-                (Long) tokenData.get("expiresAt"),
+                accessToken,
+                refreshTokenId,
+                expiresAt,
                 userMapper.toResponse(user)
         );
     }
@@ -107,6 +120,50 @@ public class AuthService {
                 .stream()
                 .map(SessionMapper::toResponse)
                 .toList();
+
+    }
+
+    public RefreshResponse refreshAccessToken(String refreshTokenId) {
+        UUID tokenUUID = UUID.fromString(refreshTokenId);
+
+        RefreshToken refreshToken = refreshTokenRepo.findByIdAndActiveTrue(tokenUUID)
+                .orElseThrow(() -> new RuntimeException("Invalid or inactive refresh token"));
+
+        if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
+            refreshToken.setActive(false);
+            refreshTokenRepo.save(refreshToken);
+            throw new RuntimeException("Refresh token expired: login to get a new one");
+        }
+
+        User user = refreshToken.getUser();
+        Session session = refreshToken.getSession();
+
+        refreshToken.setActive(false);
+        refreshTokenRepo.save(refreshToken);
+
+        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, session.getId());
+
+        RefreshToken newRefreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
+
+        return new RefreshResponse(
+                (String) tokenData.get("token"),
+                newRefreshToken.getId().toString(),
+                (Long) tokenData.get("expiresAt")
+        );
+
+    }
+
+    public void logoutDevice(UUID refreshTokenId) {
+        RefreshToken token = refreshTokenRepo.findById(refreshTokenId)
+                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+
+
+        User user = userService.getCurrentUser();
+        if(!token.getUser().getId().equals(user.getId())){
+            throw new RuntimeException("Unauthorized: Cannot modify foreign token");
+        }
+        token.setActive(false);
+        refreshTokenRepo.save(token);
 
     }
 }
