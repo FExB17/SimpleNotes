@@ -1,7 +1,15 @@
 package com.fe_b17.simplenotes.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
-public record NoteResponse(UUID id, String title, String content, LocalDateTime createdAt) {
+public record NoteResponse(
+        UUID id,
+        String title,
+        String content,
+        List<String> tags,
+        Instant createdAt,
+        Instant updatedAt
+) {
 }

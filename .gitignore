@@ -1,0 +1,23 @@
+# IDE
+.idea/
+*.iml
+
+# Build output
+/target/
+
+# Logs
+*.log
+
+# System
+.DS_Store
+Thumbs.db
+
+# Environment & secrets
+*.env
+*.properties
+!src/main/resources/application.properties
+
+# Maven Wrapper
+.mvn/
+!mvnw
+!mvnw.cmd

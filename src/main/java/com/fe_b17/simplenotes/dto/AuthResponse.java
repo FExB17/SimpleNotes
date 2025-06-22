@@ -1,6 +1,6 @@
 package com.fe_b17.simplenotes.dto;
 
 public record AuthResponse(String token,
-                           long expiresAt,
+                           Long expiresAt,
                            UserDTO user)
 {}
