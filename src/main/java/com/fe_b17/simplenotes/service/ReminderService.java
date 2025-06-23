@@ -23,7 +23,6 @@ public class ReminderService {
     private final ReminderRepo reminderRepo;
     private final NoteRepo noteRepo;
     private final UserService userService;
-    private final ReminderMapper reminderMapper;
 
     public void createReminder(ReminderRequest dto) {
         User currentUser = userService.getCurrentUser();
@@ -53,8 +52,9 @@ public class ReminderService {
 
     public List<ReminderResponse> getAllReminders() {
         User user = userService.getCurrentUser();
-        List<Reminder> reminders = reminderRepo.findAllByUserId(user.getId());
-        return null;
+        return reminderRepo.findAllByUserId(user.getId()).stream()
+                .map(ReminderMapper::toResponse)
+                .toList();
 
     }
 }

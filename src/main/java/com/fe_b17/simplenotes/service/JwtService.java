@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 
 @Service
 @RequiredArgsConstructor
@@ -37,7 +38,7 @@ public class JwtService {
         return key;
     }
 
-    public Map<String,Object> generateTokenAndExpiration(User user, String ipAddress, String userAgent) {
+    public Map<String,Object> generateTokenAndExpiration(User user, String ipAddress, String userAgent, String zoneId) {
 
         Session session = sessionService.createSession(user, ipAddress,userAgent);
 
@@ -45,20 +46,22 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId,", user.getId());
         claims.put("jti", session.getId().toString());
+        claims.put("zone", zoneId);
 
         String token = buildTokenWithSession(user.getEmail(), claims, expiresAt);
 
         Map<String,Object> result = new HashMap<>();
         result.put("token",token);
-        result.put("expirationDate",expiresAt);
+        result.put("expiresAt",expiresAt.getTime());
         return result;
     }
 
-    public Map<String,Object> generateTokenAndExpiration(User user, UUID sessionId) {
+    public Map<String,Object> generateTokenAndExpiration(User user, UUID sessionId, String zoneId) {
         Date expiresAt = Date.from(Instant.now().plus(Duration.ofMinutes(15)));
          Map<String,Object> claims = new HashMap<>();
-         claims.put("userId,", user.getId());
+         claims.put("userId", user.getId());
          claims.put("jti", sessionId.toString());
+        claims.put("zone", zoneId);
 
         Map<String,Object> result = new HashMap<>();
         result.put("token", buildTokenWithSession(user.getEmail(), claims, expiresAt));
@@ -108,6 +111,11 @@ public class JwtService {
             throw new IllegalStateException("JWT enthält keine jti (Session-ID)");
         }
         return UUID.fromString(jti);
+    }
+
+    public String extractClaim(String token, Function<Claims, String> claimsResolver) {
+        final Claims claims = extractAllclaims(token);
+        return claimsResolver.apply(claims);
     }
 
     public RefreshToken generateRefreshToken(User user, Object sessionIdObject){

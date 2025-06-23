@@ -46,7 +46,7 @@ public class AuthService {
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
 
-        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent);
+        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent,dto.timeZone());
 
         RefreshToken refreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
 
@@ -60,7 +60,7 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest dto, HttpServletRequest request) {
         User user = userRepo.findByEmail(dto.email())
-                .orElseThrow(LoginFailedException::new); //um keine E-Mails preiszugeben
+                .orElseThrow(LoginFailedException::new);
 
         if (!encoder.checkPassword(dto.password(), user.getPassword())) {
             throw new LoginFailedException();
@@ -69,7 +69,7 @@ public class AuthService {
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
 
-        Map<String, Object> accessTokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent);
+        Map<String, Object> accessTokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent, dto.timeZone());
 
         RefreshToken refreshTokenData = jwtService.generateRefreshToken(user, accessTokenData.get("sessionId"));
 
@@ -123,8 +123,8 @@ public class AuthService {
 
     }
 
-    public RefreshResponse refreshAccessToken(String refreshTokenId) {
-        UUID tokenUUID = UUID.fromString(refreshTokenId);
+    public RefreshResponse refreshAccessToken(RefreshRequest refreshRequest) {
+        UUID tokenUUID = UUID.fromString(refreshRequest.refreshId());
 
         RefreshToken refreshToken = refreshTokenRepo.findByIdAndActiveTrue(tokenUUID)
                 .orElseThrow(() -> new RuntimeException("Invalid or inactive refresh token"));
@@ -141,7 +141,7 @@ public class AuthService {
         refreshToken.setActive(false);
         refreshTokenRepo.save(refreshToken);
 
-        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, session.getId());
+        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, session.getId(),refreshRequest.timeZone());
 
         RefreshToken newRefreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
 
