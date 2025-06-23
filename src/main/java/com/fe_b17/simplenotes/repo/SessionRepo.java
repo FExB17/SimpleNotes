@@ -10,5 +10,4 @@ import java.util.UUID;
 public interface SessionRepo extends JpaRepository<Session, UUID> {
 
     List<Session> findByUserAndActiveTrue(User user);
-
 }

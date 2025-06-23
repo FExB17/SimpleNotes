@@ -2,7 +2,9 @@ package com.fe_b17.simplenotes.mapper;
 
 import com.fe_b17.simplenotes.dto.SessionResponse;
 import com.fe_b17.simplenotes.models.Session;
+import org.springframework.stereotype.Component;
 
+@Component
 public class SessionMapper {
 
 

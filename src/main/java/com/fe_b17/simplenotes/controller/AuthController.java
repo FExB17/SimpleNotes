@@ -13,20 +13,20 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
-
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest dto, HttpServletRequest request) {
-        return ResponseEntity.ok(authService.login(dto, request));
-    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest dto, HttpServletRequest request) {
         AuthResponse response = authService.registerUser(dto, request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest dto, HttpServletRequest request) {
+        return ResponseEntity.ok(authService.login(dto, request));
     }
 
     @PostMapping("/logout")

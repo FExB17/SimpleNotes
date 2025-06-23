@@ -69,13 +69,13 @@ public class AuthService {
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
 
-        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent);
+        Map<String, Object> accessTokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent);
 
-        RefreshToken refreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
+        RefreshToken refreshTokenData = jwtService.generateRefreshToken(user, accessTokenData.get("sessionId"));
 
-        String refreshTokenId = refreshToken.getId().toString();
-        String accessToken = (String) tokenData.get("token");
-        Long expiresAt = (Long) tokenData.get("expiresAt");
+        String refreshTokenId = refreshTokenData.getId().toString();
+        String accessToken = (String) accessTokenData.get("token");
+        Long expiresAt = (Long) accessTokenData.get("expiresAt");
 
 
         return new AuthResponse(

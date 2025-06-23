@@ -71,7 +71,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(subject)
                 .addClaims(claims)
-                .setIssuedAt(new Date())
+                .setIssuedAt(Date.from(Instant.now()))
                 .setExpiration(expiration)
                 .signWith(getKey(),SignatureAlgorithm.HS256)
                 .compact();
