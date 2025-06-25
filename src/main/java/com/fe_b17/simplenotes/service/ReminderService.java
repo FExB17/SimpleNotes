@@ -10,11 +10,15 @@ import com.fe_b17.simplenotes.models.RepeatMode;
 import com.fe_b17.simplenotes.models.User;
 import com.fe_b17.simplenotes.repo.NoteRepo;
 import com.fe_b17.simplenotes.repo.ReminderRepo;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -24,30 +28,71 @@ public class ReminderService {
     private final NoteRepo noteRepo;
     private final UserService userService;
 
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(10);
+
+    @PostConstruct
+    public void init() {
+        reminderRepo.findAllByActiveTrue().forEach(this::schedule);
+    }
+
     public void createReminder(ReminderRequest dto) {
         User currentUser = userService.getCurrentUser();
 
-        Note note = noteRepo.findById(dto.noteId())
-                .orElseThrow(() -> new RuntimeException("Note not found"));
+        Note note = null;
+        if (dto.noteId() != null) {
+            note = noteRepo.findById(dto.noteId())
+                    .orElseThrow(() -> new RuntimeException("Note not found"));
 
-        if (!note.getUser().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Unauthorized");
+            if (!note.getUser().getId().equals(currentUser.getId())) {
+                throw new RuntimeException("Unauthorized");
+            }
         }
 
-        ZonedDateTime zonedTrigger = dto.allDay()
-                ? dto.triggerAt().with(LocalTime.MIDNIGHT)
-                : dto.triggerAt();
+        Reminder r = new Reminder();
+        r.setText(dto.text());
+        r.setRepeatMode(RepeatMode.valueOf(dto.repeatMode()));
+        r.setAllDay(dto.allDay());
+        r.setUseUtc(dto.useUtc());
+        r.setNote(note);
+        r.setUser(currentUser);
 
-        Instant triggerAt = zonedTrigger.toInstant();
+        if (dto.useUtc()) {
+            r.setTriggerAtUtc(dto.triggerAt().toInstant());
+        } else {
+            ZoneId zone = ZoneId.of(dto.timeZone());
+            LocalTime localTime = LocalTime.parse(dto.localTime());
+            ZonedDateTime zoned = ZonedDateTime.of(LocalDate.now(zone), localTime, zone);
+            r.setTriggerAtUtc(zoned.toInstant());
+            r.setZoneId(zone.getId());
+            r.setTriggerAtLocalTime(localTime);
+        }
 
-        Reminder reminder = new Reminder();
-        reminder.setTriggerAt(triggerAt);
-        reminder.setRepeatMode(RepeatMode.valueOf(dto.repeatMode()));
-        reminder.setText(dto.text());
-        reminder.setUser(currentUser);
-        reminder.setNote(note);
+        Reminder saved = reminderRepo.save(r);
+        schedule(saved);
+    }
 
-        reminderRepo.save(reminder);
+    public void triggerReminder(Reminder r) {
+        System.out.println("🔔 Reminder ausgelöst: " + r.getText());
+
+        Instant next = r.getRepeatMode().getNextTrigger(Instant.now(), r);
+        if (next == null) {
+            r.setActive(false);
+        } else {
+            r.setTriggerAtUtc(next);
+            schedule(r);
+        }
+
+        reminderRepo.save(r);
+    }
+
+    private void schedule(Reminder r) {
+        Instant now = Instant.now();
+        Instant trigger = r.getTriggerAtUtc();
+
+        if (trigger.isBefore(now)) return;
+
+        long delay = Duration.between(now, trigger).toMillis();
+        executor.schedule(() -> triggerReminder(r), delay, TimeUnit.MILLISECONDS);
     }
 
     public List<ReminderResponse> getAllReminders() {
@@ -55,7 +100,5 @@ public class ReminderService {
         return reminderRepo.findAllByUserId(user.getId()).stream()
                 .map(ReminderMapper::toResponse)
                 .toList();
-
     }
 }
-

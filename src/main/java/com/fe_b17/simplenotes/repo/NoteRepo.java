@@ -3,6 +3,7 @@ package com.fe_b17.simplenotes.repo;
 import com.fe_b17.simplenotes.models.Note;
 import com.fe_b17.simplenotes.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,5 +21,6 @@ public interface NoteRepo extends JpaRepository<Note, UUID> {
 
     void deleteByUserId(UUID userId);
 
+    @Modifying
     void deleteByUser(User user);
 }

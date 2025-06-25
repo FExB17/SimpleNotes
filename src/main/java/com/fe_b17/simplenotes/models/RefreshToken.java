@@ -10,14 +10,14 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-@Getter
-@Setter
+@Getter @Setter
 @Entity
+@Table(name = "refresh_tokens")
 public class RefreshToken {
 
     @Id
     @GeneratedValue
-    private UUID id;
+    private UUID id; // the id is the refresh token itself
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private User user;

@@ -43,19 +43,7 @@ public class AuthService {
         user.setPassword(encoder.hashPassword(dto.password()));
         userRepo.save(user);
 
-        String ip = request.getRemoteAddr();
-        String userAgent = request.getHeader("User-Agent");
-
-        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent,dto.timeZone());
-
-        RefreshToken refreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
-
-        return new AuthResponse(
-                (String) tokenData.get("token"),
-                refreshToken.getId().toString(),
-                (Long) tokenData.get("expiresAt"),
-                userMapper.toResponse(user)
-        );
+        return getAuthResponse(request, user);
     }
 
     public AuthResponse login(LoginRequest dto, HttpServletRequest request) {
@@ -66,53 +54,49 @@ public class AuthService {
             throw new LoginFailedException();
         }
 
-        String ip = request.getRemoteAddr();
-        String userAgent = request.getHeader("User-Agent");
+        return getAuthResponse(request, user);
+    }
 
-        Map<String, Object> accessTokenData = jwtService.generateTokenAndExpiration(user, ip, userAgent, dto.timeZone());
+    private AuthResponse getAuthResponse(HttpServletRequest request, User user) {
+        Map<String, Object> accessTokenData = jwtService.createSessionAndToken(
+                user,
+                request.getRemoteAddr(),
+                request.getHeader("User-Agent"),
+                "Europe/Berlin"
+        );
 
-        RefreshToken refreshTokenData = jwtService.generateRefreshToken(user, accessTokenData.get("sessionId"));
-
-        String refreshTokenId = refreshTokenData.getId().toString();
-        String accessToken = (String) accessTokenData.get("token");
-        Long expiresAt = (Long) accessTokenData.get("expiresAt");
-
+        RefreshToken refreshToken = jwtService.generateRefreshToken(user, accessTokenData.get("jti"));
 
         return new AuthResponse(
-                accessToken,
-                refreshTokenId,
-                expiresAt,
+                (String) accessTokenData.get("token"),
+                refreshToken.getId().toString(),
+                (Long) accessTokenData.get("expiresAt"),
                 userMapper.toResponse(user)
         );
     }
 
     public void logout(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalStateException("No Valid Authorization-Header found");
-        }
-
-        String authToken = authHeader.substring(7);
-        UUID sessionId = jwtService.extractSessionId(authToken);
+        String barerToken = extractBarerToken(request);
+        UUID sessionId = jwtService.extractSessionId(barerToken);
         sessionService.deactivateSession(sessionId);
-
     }
 
     public void logoutAll(HttpServletRequest request) {
+       extractBarerToken(request);
+        User user = userService.getCurrentUser();
+        sessionService.deactivateAllSessionsForUser(user);
+    }
+
+    public String extractBarerToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new IllegalStateException("No Valid Authorization-Header found");
         }
-        User user = userService.getCurrentUser();
-        sessionService.deactivateAllSessionsForUser(user);
-
+        return authHeader.substring(7);
     }
 
     public List<SessionResponse> getActiveSessions(HttpServletRequest request) {
-
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (request.getHeader("Authorization") == null) {
             throw new IllegalStateException("No Valid Authorization-Header found");
         }
         User user = userService.getCurrentUser();
@@ -120,7 +104,6 @@ public class AuthService {
                 .stream()
                 .map(SessionMapper::toResponse)
                 .toList();
-
     }
 
     public RefreshResponse refreshAccessToken(RefreshRequest refreshRequest) {
@@ -135,35 +118,32 @@ public class AuthService {
             throw new RuntimeException("Refresh token expired: login to get a new one");
         }
 
-        User user = refreshToken.getUser();
-        Session session = refreshToken.getSession();
-
         refreshToken.setActive(false);
         refreshTokenRepo.save(refreshToken);
 
-        Map<String, Object> tokenData = jwtService.generateTokenAndExpiration(user, session.getId(),refreshRequest.timeZone());
+        User user = refreshToken.getUser();
+        Session session = refreshToken.getSession();
 
-        RefreshToken newRefreshToken = jwtService.generateRefreshToken(user, tokenData.get("sessionId"));
+        Map<String, Object> accessTokenData = jwtService.generateAccessTokenForSession(user, session.getId(), "Europe/Berlin");
+        RefreshToken newRefreshToken = jwtService.generateRefreshToken(user, session.getId());
 
         return new RefreshResponse(
-                (String) tokenData.get("token"),
+                (String) accessTokenData.get("token"),
                 newRefreshToken.getId().toString(),
-                (Long) tokenData.get("expiresAt")
+                (Long) accessTokenData.get("expiresAt")
         );
-
     }
 
     public void logoutDevice(UUID refreshTokenId) {
         RefreshToken token = refreshTokenRepo.findById(refreshTokenId)
                 .orElseThrow(() -> new RuntimeException("Refresh token not found"));
 
-
         User user = userService.getCurrentUser();
-        if(!token.getUser().getId().equals(user.getId())){
+        if (!token.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Unauthorized: Cannot modify foreign token");
         }
+
         token.setActive(false);
         refreshTokenRepo.save(token);
-
     }
 }

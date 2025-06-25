@@ -14,7 +14,7 @@ public class TokenCleanupService {
 
     private final RefreshTokenRepo refreshTokenRepo;
 
-    @Scheduled(fixedRate = 600000)
+    @Scheduled(initialDelay = 6000000, fixedRate = 6000000)
     public void cleanupExpiredAndOldTokens() {
 
         Instant cutoff = Instant.now().minus(Duration.ofDays(10));

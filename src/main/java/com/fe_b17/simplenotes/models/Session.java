@@ -9,8 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 
-@Getter
-@Setter
+@Getter @Setter
 @Entity
 @Table(name = "sessions")
 public class Session {

@@ -1,10 +1,46 @@
 package com.fe_b17.simplenotes.models;
 
-public enum RepeatMode {
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
-    NONE,
-    DAILY,
-    WEEKLY,
-    MONTHLY,
-    YEARLY,
+public enum RepeatMode {
+    NONE {
+        @Override
+        public Instant getNextTrigger(Instant current, Reminder reminder) {
+            return null;
+        }
+    },
+    DAILY {
+        @Override
+        public Instant getNextTrigger(Instant current, Reminder reminder) {
+            return current.plus(1, ChronoUnit.DAYS);
+        }
+    },
+    WEEKLY {
+        @Override
+        public Instant getNextTrigger(Instant current, Reminder reminder) {
+            return current.plus(7, ChronoUnit.DAYS);
+        }
+    },
+    MONTHLY {
+        @Override
+        public Instant getNextTrigger(Instant current, Reminder reminder) {
+            return current.plus(1, ChronoUnit.MONTHS);
+        }
+    },
+    YEARLY {
+        @Override
+        public Instant getNextTrigger(Instant current, Reminder reminder) {
+            return current.plus(1, ChronoUnit.YEARS);
+        }
+    },
+    CUSTOM{
+        @Override
+        public Instant getNextTrigger(Instant current, Reminder reminder) {
+            return current.plus(1, ChronoUnit.DAYS);
+        }
+    };
+
+    public abstract Instant getNextTrigger(Instant current, Reminder reminder);
+
 }

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Getter @Setter
@@ -17,8 +18,14 @@ public class Reminder {
     @GeneratedValue
     private UUID id;
 
+    private String text;
+
     @Column(nullable = false)
-    private Instant triggerAt;
+    private Instant triggerAtUtc;
+    private boolean useUtc = true;
+
+    private LocalTime triggerAtLocalTime;
+    private String zoneId;
 
     private boolean allDay;
 
@@ -26,15 +33,13 @@ public class Reminder {
     @Column(nullable = false)
     private RepeatMode repeatMode = RepeatMode.NONE;
 
-    private String text;
-
     @Column(nullable = false)
     private boolean active = true;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private User user;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     private Note note;
-}
 
+}
