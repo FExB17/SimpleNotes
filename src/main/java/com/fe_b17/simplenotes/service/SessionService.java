@@ -1,7 +1,9 @@
 package com.fe_b17.simplenotes.service;
 
+import com.fe_b17.simplenotes.models.RefreshToken;
 import com.fe_b17.simplenotes.models.Session;
 import com.fe_b17.simplenotes.models.User;
+import com.fe_b17.simplenotes.repo.RefreshTokenRepo;
 import com.fe_b17.simplenotes.repo.SessionRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SessionService {
     private final SessionRepo sessionRepo;
+    private final RefreshTokenRepo refreshTokenRepo;
 
     public Session createSession(User user, String ipAddress, String userAgent) {
         Session session = new Session();
@@ -26,10 +29,10 @@ public class SessionService {
 
     public void deactivateSession(UUID sessionId) {
 
-        sessionRepo.findById(sessionId).ifPresent(session -> {
-            session.setActive(false);
-            sessionRepo.save(session);
-        });
+        Session session = sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+        session.setActive(false);
+        sessionRepo.save(session);
     }
 
     public boolean isActive(UUID sessionId){
@@ -42,10 +45,18 @@ public class SessionService {
         return sessionRepo.findByUserAndActiveTrue(user);
     }
 
-    public void deactivateAllSessionsForUser(User user){
+    public void deactivateAllSessionsForUser(User user) {
         List<Session> sessions = sessionRepo.findByUserAndActiveTrue(user);
-        sessions.forEach(session -> session.setActive(false));
+
+        for (Session session : sessions) {
+            session.setActive(false);
+            List<RefreshToken> tokens = refreshTokenRepo.findBySessionAndActiveTrue(session);
+            for (RefreshToken token : tokens) {
+                token.setActive(false);
+            }
+            refreshTokenRepo.saveAll(tokens);
+        }
+
         sessionRepo.saveAll(sessions);
     }
-
 }

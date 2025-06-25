@@ -33,7 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try{
             String authHeader = request.getHeader("Authorization");
-
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 System.out.println("no valid authorization header");
                 filterChain.doFilter(request, response);

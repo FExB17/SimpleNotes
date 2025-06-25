@@ -43,7 +43,7 @@ public class AuthService {
         user.setPassword(encoder.hashPassword(dto.password()));
         userRepo.save(user);
 
-        return getAuthResponse(request, user);
+        return createTokenAndGetAuthResponse(request, user);
     }
 
     public AuthResponse login(LoginRequest dto, HttpServletRequest request) {
@@ -54,10 +54,10 @@ public class AuthService {
             throw new LoginFailedException();
         }
 
-        return getAuthResponse(request, user);
+        return createTokenAndGetAuthResponse(request, user);
     }
 
-    private AuthResponse getAuthResponse(HttpServletRequest request, User user) {
+    private AuthResponse createTokenAndGetAuthResponse(HttpServletRequest request, User user) {
         Map<String, Object> accessTokenData = jwtService.createSessionAndToken(
                 user,
                 request.getRemoteAddr(),
@@ -121,7 +121,12 @@ public class AuthService {
         refreshToken.setActive(false);
         refreshTokenRepo.save(refreshToken);
 
+
         User user = refreshToken.getUser();
+        if(!user.equals(userService.getCurrentUser())) {
+            throw new RuntimeException("User doesn't belong to this session");
+        }
+
         Session session = refreshToken.getSession();
 
         Map<String, Object> accessTokenData = jwtService.generateAccessTokenForSession(user, session.getId(), "Europe/Berlin");
@@ -142,8 +147,8 @@ public class AuthService {
         if (!token.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Unauthorized: Cannot modify foreign token");
         }
-
         token.setActive(false);
+        sessionService.deactivateSession(token.getId());
         refreshTokenRepo.save(token);
     }
 }
