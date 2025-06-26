@@ -20,7 +20,7 @@ public class RefreshToken {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private User user;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     private Session session;
 
     @CreationTimestamp

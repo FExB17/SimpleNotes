@@ -49,7 +49,6 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<RefreshResponse> refreshToken(@RequestBody RefreshRequest request){
         return ResponseEntity.ok(authService.refreshAccessToken(request));
-
     }
 
     @PostMapping("/logout-device/{refreshTokenId}")

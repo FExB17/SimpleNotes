@@ -42,14 +42,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             if (!jwtService.isValidToken(token)) {
-                System.out.println("invalid Token");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid token or expired");
                 filterChain.doFilter(request, response);
                 return;
             }
 
             UUID sessionId = jwtService.extractSessionId(token);
             if (!sessionService.isActive(sessionId)) {
-                System.out.println("invalid Session or not existent");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid session or expired");
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -62,6 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     null,
                     null
             );
+
             SecurityContextHolder.getContext().setAuthentication(authToken);
             System.out.println("User added to SecurityContext: " + email);
             String zoneIdStr = jwtService.extractClaim(token, claims -> claims.get("zone").toString());

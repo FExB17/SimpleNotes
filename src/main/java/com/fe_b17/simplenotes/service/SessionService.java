@@ -27,12 +27,12 @@ public class SessionService {
         return sessionRepo.save(session);
     }
 
-    public void deactivateSession(UUID sessionId) {
+    public Session deactivateSession(UUID sessionId) {
 
         Session session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
         session.setActive(false);
-        sessionRepo.save(session);
+        return sessionRepo.save(session);
     }
 
     public boolean isActive(UUID sessionId){

@@ -78,13 +78,23 @@ public class AuthService {
     public void logout(HttpServletRequest request) {
         String barerToken = extractBarerToken(request);
         UUID sessionId = jwtService.extractSessionId(barerToken);
-        sessionService.deactivateSession(sessionId);
+        Session session = sessionService.deactivateSession(sessionId);
+        refreshTokenRepo.findBySession(session).ifPresent(token -> {
+            token.setActive(false);
+            refreshTokenRepo.save(token);
+        });
+
     }
 
     public void logoutAll(HttpServletRequest request) {
        extractBarerToken(request);
         User user = userService.getCurrentUser();
         sessionService.deactivateAllSessionsForUser(user);
+        refreshTokenRepo.findByUser(user).ifPresent(token -> {
+            token.setActive(false);
+            refreshTokenRepo.save(token);
+        });
+
     }
 
     public String extractBarerToken(HttpServletRequest request) {
@@ -118,16 +128,16 @@ public class AuthService {
             throw new RuntimeException("Refresh token expired: login to get a new one");
         }
 
-        refreshToken.setActive(false);
-        refreshTokenRepo.save(refreshToken);
+        refreshTokenRepo.delete(refreshToken);
 
 
         User user = refreshToken.getUser();
-        if(!user.equals(userService.getCurrentUser())) {
-            throw new RuntimeException("User doesn't belong to this session");
-        }
-
         Session session = refreshToken.getSession();
+
+        if(!session.isActive()) {
+            System.out.println("Session is not active");
+            return null;
+        }
 
         Map<String, Object> accessTokenData = jwtService.generateAccessTokenForSession(user, session.getId(), "Europe/Berlin");
         RefreshToken newRefreshToken = jwtService.generateRefreshToken(user, session.getId());
@@ -148,7 +158,8 @@ public class AuthService {
             throw new RuntimeException("Unauthorized: Cannot modify foreign token");
         }
         token.setActive(false);
-        sessionService.deactivateSession(token.getId());
+        Session session = sessionService.deactivateSession(token.getId());
+        token.setActive(false);
         refreshTokenRepo.save(token);
     }
 }
