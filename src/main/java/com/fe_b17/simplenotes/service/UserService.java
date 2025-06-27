@@ -14,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +27,17 @@ public class UserService {
     private final RefreshTokenRepo refreshTokenRepo;
     private final PasswordEncoder passwordEncoder;
 
-    public User getCurrentUser(){
+    public User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {
+            throw new RuntimeException("No authenticated user");
+        }
+
         String email = auth.getName();
+
         return userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found " + email));
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
     }
 
     @Transactional
@@ -42,5 +50,9 @@ public class UserService {
         reminderRepo.deleteByUser(user);
         refreshTokenRepo.deleteByUser(user);
         userRepo.deleteById(getCurrentUser().getId());
+    }
+
+    public List<User> getAllUsers() {
+        return userRepo.findAll();
     }
 }

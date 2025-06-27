@@ -67,14 +67,18 @@ public class ReminderService {
             r.setTriggerAtLocalTime(localTime);
         }
 
-        Reminder saved = reminderRepo.save(r);
-        schedule(saved);
+        try {
+            Reminder saved = reminderRepo.save(r);
+            schedule(saved);
+        } catch (Exception e) {
+            throw new RuntimeException("Could not save Reminder: " + e);
+        }
     }
 
     public void triggerReminder(Reminder r) {
-        System.out.println("🔔 Reminder ausgelöst: " + r.getText());
+        System.out.println("Reminder triggered: " + r.getText());
 
-        Instant next = r.getRepeatMode().getNextTrigger(Instant.now(), r);
+        Instant next = r.getRepeatMode().getNextTrigger(Instant.now());
         if (next == null) {
             r.setActive(false);
         } else {

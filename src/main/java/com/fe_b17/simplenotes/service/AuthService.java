@@ -27,7 +27,6 @@ public class AuthService {
     private final UserRepo userRepo;
     private final PasswordService encoder;
     private final JwtService jwtService;
-    private final UserMapper userMapper;
     private final SessionService sessionService;
     private final UserService userService;
     private final RefreshTokenRepo refreshTokenRepo;
@@ -71,7 +70,7 @@ public class AuthService {
                 (String) accessTokenData.get("token"),
                 refreshToken.getId().toString(),
                 (Long) accessTokenData.get("expiresAt"),
-                userMapper.toResponse(user)
+                UserMapper.toResponse(user)
         );
     }
 
@@ -90,11 +89,6 @@ public class AuthService {
        extractBarerToken(request);
         User user = userService.getCurrentUser();
         sessionService.deactivateAllSessionsForUser(user);
-        refreshTokenRepo.findByUser(user).ifPresent(token -> {
-            token.setActive(false);
-            refreshTokenRepo.save(token);
-        });
-
     }
 
     public String extractBarerToken(HttpServletRequest request) {
@@ -158,7 +152,7 @@ public class AuthService {
             throw new RuntimeException("Unauthorized: Cannot modify foreign token");
         }
         token.setActive(false);
-        Session session = sessionService.deactivateSession(token.getId());
+        sessionService.deactivateSession(token.getId());
         token.setActive(false);
         refreshTokenRepo.save(token);
     }
