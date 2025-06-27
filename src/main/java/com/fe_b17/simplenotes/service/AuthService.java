@@ -2,6 +2,7 @@ package com.fe_b17.simplenotes.service;
 
 import com.fe_b17.simplenotes.dto.*;
 import com.fe_b17.simplenotes.exception.EmailAlreadyExistsException;
+import com.fe_b17.simplenotes.exception.InvalidTokenException;
 import com.fe_b17.simplenotes.exception.LoginFailedException;
 import com.fe_b17.simplenotes.mapper.SessionMapper;
 import com.fe_b17.simplenotes.mapper.UserMapper;
@@ -12,6 +13,7 @@ import com.fe_b17.simplenotes.repo.RefreshTokenRepo;
 import com.fe_b17.simplenotes.repo.UserRepo;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -50,6 +53,7 @@ public class AuthService {
                 .orElseThrow(LoginFailedException::new);
 
         if (!encoder.checkPassword(dto.password(), user.getPassword())) {
+            log.warn("Login failed: password mismatch for {}",dto.email());
             throw new LoginFailedException();
         }
 
@@ -75,7 +79,7 @@ public class AuthService {
     }
 
     public void logout(HttpServletRequest request) {
-        String barerToken = extractBarerToken(request);
+        String barerToken = extractBearerToken(request);
         UUID sessionId = jwtService.extractSessionId(barerToken);
         Session session = sessionService.deactivateSession(sessionId);
         refreshTokenRepo.findBySession(session).ifPresent(token -> {
@@ -86,22 +90,24 @@ public class AuthService {
     }
 
     public void logoutAll(HttpServletRequest request) {
-       extractBarerToken(request);
+       extractBearerToken(request);
         User user = userService.getCurrentUser();
         sessionService.deactivateAllSessionsForUser(user);
     }
 
-    public String extractBarerToken(HttpServletRequest request) {
+    public String extractBearerToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalStateException("No Valid Authorization-Header found");
+            log.warn("Authorization header missing or wrong {}", authHeader);
+            throw new InvalidTokenException();
         }
-        return authHeader.substring(7);
+        return authHeader.substring("Bearer ".length());
     }
 
     public List<SessionResponse> getActiveSessions(HttpServletRequest request) {
         if (request.getHeader("Authorization") == null) {
-            throw new IllegalStateException("No Valid Authorization-Header found");
+            log.warn("Authorization header missing");
+            throw new InvalidTokenException();
         }
         User user = userService.getCurrentUser();
         return sessionService.getActiveSessions(user)
@@ -114,7 +120,7 @@ public class AuthService {
         UUID tokenUUID = UUID.fromString(refreshRequest.refreshId());
 
         RefreshToken refreshToken = refreshTokenRepo.findByIdAndActiveTrue(tokenUUID)
-                .orElseThrow(() -> new RuntimeException("Invalid or inactive refresh token"));
+                .orElseThrow((InvalidTokenException::new));
 
         if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
             refreshToken.setActive(false);
