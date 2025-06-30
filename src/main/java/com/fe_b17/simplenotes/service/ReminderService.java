@@ -3,6 +3,9 @@ package com.fe_b17.simplenotes.service;
 
 import com.fe_b17.simplenotes.dto.ReminderRequest;
 import com.fe_b17.simplenotes.dto.ReminderResponse;
+import com.fe_b17.simplenotes.exception.InvalidRequestException;
+import com.fe_b17.simplenotes.exception.NoSuchNoteException;
+import com.fe_b17.simplenotes.exception.NotePermissionException;
 import com.fe_b17.simplenotes.mapper.ReminderMapper;
 import com.fe_b17.simplenotes.models.Note;
 import com.fe_b17.simplenotes.models.Reminder;
@@ -12,6 +15,7 @@ import com.fe_b17.simplenotes.repo.NoteRepo;
 import com.fe_b17.simplenotes.repo.ReminderRepo;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
@@ -20,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReminderService {
@@ -41,10 +46,10 @@ public class ReminderService {
         Note note = null;
         if (dto.noteId() != null) {
             note = noteRepo.findById(dto.noteId())
-                    .orElseThrow(() -> new RuntimeException("Note not found"));
+                    .orElseThrow(NoSuchNoteException::new);
 
             if (!note.getUser().getId().equals(currentUser.getId())) {
-                throw new RuntimeException("Unauthorized");
+                throw new NotePermissionException();
             }
         }
 
@@ -71,12 +76,13 @@ public class ReminderService {
             Reminder saved = reminderRepo.save(r);
             schedule(saved);
         } catch (Exception e) {
-            throw new RuntimeException("Could not save Reminder: " + e);
+            log.error("Failed to save reminder {}", e.getMessage(),e);
+            throw new InvalidRequestException("Could not save reminder");
         }
     }
 
     public void triggerReminder(Reminder r) {
-        System.out.println("Reminder triggered: " + r.getText());
+        log.info("Triggering reminder {}", r.getText());
 
         Instant next = r.getRepeatMode().getNextTrigger(Instant.now());
         if (next == null) {

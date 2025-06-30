@@ -1,5 +1,6 @@
 package com.fe_b17.simplenotes.service;
 
+import com.fe_b17.simplenotes.exception.InvalidTokenException;
 import com.fe_b17.simplenotes.models.RefreshToken;
 import com.fe_b17.simplenotes.models.Session;
 import com.fe_b17.simplenotes.models.User;
@@ -9,8 +10,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import java.security.Key;
 import java.time.Duration;
@@ -21,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JwtService {
@@ -29,23 +34,19 @@ public class JwtService {
     private String jwtSecret;
     private Key key;
 
-    private final SessionService sessionService;
     private final SessionRepo sessionRepo;
     private final RefreshTokenRepo refreshTokenRepo;
 
     private static final Duration ACCESS_TOKEN_DURATION = Duration.ofMinutes(15);
     private static final Duration REFRESH_TOKEN_DURATION = Duration.ofDays(30);
 
-    public Key getKey() {
-        if (this.key == null) {
-            this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
-        }
-        return key;
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    public Map<String, Object> createSessionAndToken(User user, String ipAddress, String userAgent, String zoneId) {
-        Session session = sessionService.createSession(user, ipAddress, userAgent);
-        return generateAccessTokenForSession(user, session.getId(), zoneId);
+    public Key getKey() {
+        return key;
     }
 
     public Map<String, Object> generateAccessTokenForSession(User user, UUID sessionId, String zoneId) {
@@ -81,25 +82,29 @@ public class JwtService {
         return token;
     }
 
-    public boolean isValidToken(String token) {
+    public void validateToken(String token) {
         try {
             Jwts.parserBuilder()
                     .setSigningKey(getKey())
                     .build()
                     .parseClaimsJws(token);
-            return true;
         } catch (Exception e) {
-            System.out.println("Token is invalid: " + e.getMessage());
-            return false;
+            log.warn("invalid JWT: {}", e.getMessage());
+            throw new InvalidTokenException();
         }
     }
 
     public Claims extractAllclaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        }catch (Exception e) {
+            log.warn("Failed to parse claims: {}", e.getMessage());
+            throw new InvalidTokenException();
+        }
     }
 
     public String extractUserEmail(String token) {
@@ -109,9 +114,13 @@ public class JwtService {
     public UUID extractSessionId(String token) {
         String jti = extractAllclaims(token).get("jti", String.class);
         if (jti == null || jti.isBlank()) {
-            throw new IllegalStateException("JWT enthält keine jti (Session-ID)");
+            throw new InvalidTokenException();
         }
         return UUID.fromString(jti);
+    }
+
+    public Instant extractExpirationDate(String token) {
+        return extractAllclaims(token).getExpiration().toInstant();
     }
 
     public String extractClaim(String token, Function<Claims, String> resolver) {

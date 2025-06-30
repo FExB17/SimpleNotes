@@ -14,8 +14,7 @@ Thumbs.db
 
 # Environment & secrets
 *.env
-*.properties
-!src/main/resources/application.properties
+src/main/resources/application-secrets.yaml
 
 # Maven Wrapper
 .mvn/

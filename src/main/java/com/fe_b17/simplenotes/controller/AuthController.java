@@ -41,11 +41,6 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/sessions")
-    public ResponseEntity<List<SessionResponse>> getAllSessions(HttpServletRequest request) {
-        return ResponseEntity.ok(authService.getActiveSessions(request));
-    }
-
     @PostMapping("/refresh")
     public ResponseEntity<RefreshResponse> refreshToken(@RequestBody RefreshRequest request){
         return ResponseEntity.ok(authService.refreshAccessToken(request));

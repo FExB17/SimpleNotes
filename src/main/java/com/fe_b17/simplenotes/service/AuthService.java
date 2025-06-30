@@ -4,6 +4,7 @@ import com.fe_b17.simplenotes.dto.*;
 import com.fe_b17.simplenotes.exception.EmailAlreadyExistsException;
 import com.fe_b17.simplenotes.exception.InvalidTokenException;
 import com.fe_b17.simplenotes.exception.LoginFailedException;
+import com.fe_b17.simplenotes.exception.UserNotFoundException;
 import com.fe_b17.simplenotes.mapper.SessionMapper;
 import com.fe_b17.simplenotes.mapper.UserMapper;
 import com.fe_b17.simplenotes.models.RefreshToken;
@@ -44,7 +45,7 @@ public class AuthService {
         user.setUsername(dto.username());
         user.setPassword(encoder.hashPassword(dto.password()));
         userRepo.save(user);
-
+        log.info("New user registered: {}", dto.email());
         return createTokenAndGetAuthResponse(request, user);
     }
 
@@ -56,15 +57,15 @@ public class AuthService {
             log.warn("Login failed: password mismatch for {}",dto.email());
             throw new LoginFailedException();
         }
-
+        log.info("Login successful for {}", dto.email());
         return createTokenAndGetAuthResponse(request, user);
     }
 
     private AuthResponse createTokenAndGetAuthResponse(HttpServletRequest request, User user) {
-        Map<String, Object> accessTokenData = jwtService.createSessionAndToken(
+        Session session = sessionService.createSession(user, request.getRemoteAddr(), request.getHeader("User-Agent"));
+        Map<String, Object> accessTokenData = jwtService.generateAccessTokenForSession(
                 user,
-                request.getRemoteAddr(),
-                request.getHeader("User-Agent"),
+                session.getId(),
                 "Europe/Berlin"
         );
 
@@ -93,50 +94,37 @@ public class AuthService {
        extractBearerToken(request);
         User user = userService.getCurrentUser();
         sessionService.deactivateAllSessionsForUser(user);
+        log.info("User {} logged out from all devices", user.getEmail());
     }
 
     public String extractBearerToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("Authorization header missing or wrong {}", authHeader);
+            log.warn("Authorization header missing or malformed");
             throw new InvalidTokenException();
         }
         return authHeader.substring("Bearer ".length());
-    }
-
-    public List<SessionResponse> getActiveSessions(HttpServletRequest request) {
-        if (request.getHeader("Authorization") == null) {
-            log.warn("Authorization header missing");
-            throw new InvalidTokenException();
-        }
-        User user = userService.getCurrentUser();
-        return sessionService.getActiveSessions(user)
-                .stream()
-                .map(SessionMapper::toResponse)
-                .toList();
     }
 
     public RefreshResponse refreshAccessToken(RefreshRequest refreshRequest) {
         UUID tokenUUID = UUID.fromString(refreshRequest.refreshId());
 
         RefreshToken refreshToken = refreshTokenRepo.findByIdAndActiveTrue(tokenUUID)
-                .orElseThrow((InvalidTokenException::new));
+                .orElseThrow(InvalidTokenException::new);
 
         if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
             refreshToken.setActive(false);
             refreshTokenRepo.save(refreshToken);
-            throw new RuntimeException("Refresh token expired: login to get a new one");
+            throw new InvalidTokenException();
         }
-
         refreshTokenRepo.delete(refreshToken);
-
 
         User user = refreshToken.getUser();
         Session session = refreshToken.getSession();
 
         if(!session.isActive()) {
-            System.out.println("Session is not active");
-            return null;
+            log.warn("Session has been expired: {}", session.getId());
+            throw new InvalidTokenException();
         }
 
         Map<String, Object> accessTokenData = jwtService.generateAccessTokenForSession(user, session.getId(), "Europe/Berlin");
@@ -151,14 +139,15 @@ public class AuthService {
 
     public void logoutDevice(UUID refreshTokenId) {
         RefreshToken token = refreshTokenRepo.findById(refreshTokenId)
-                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+                .orElseThrow(InvalidTokenException::new);
 
         User user = userService.getCurrentUser();
         if (!token.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized: Cannot modify foreign token");
+            log.warn("Logout attempt from unauthorized user: {}", token.getUser().getId());
+            throw new UserNotFoundException(token.getUser().getEmail());
         }
         token.setActive(false);
-        sessionService.deactivateSession(token.getId());
+        sessionService.deactivateSession(token.getSession().getId());
         token.setActive(false);
         refreshTokenRepo.save(token);
     }
