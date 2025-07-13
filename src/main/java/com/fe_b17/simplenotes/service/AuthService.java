@@ -5,7 +5,6 @@ import com.fe_b17.simplenotes.exception.EmailAlreadyExistsException;
 import com.fe_b17.simplenotes.exception.InvalidTokenException;
 import com.fe_b17.simplenotes.exception.LoginFailedException;
 import com.fe_b17.simplenotes.exception.UserNotFoundException;
-import com.fe_b17.simplenotes.mapper.SessionMapper;
 import com.fe_b17.simplenotes.mapper.UserMapper;
 import com.fe_b17.simplenotes.models.RefreshToken;
 import com.fe_b17.simplenotes.models.Session;
@@ -18,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -87,7 +85,6 @@ public class AuthService {
             token.setActive(false);
             refreshTokenRepo.save(token);
         });
-
     }
 
     public void logoutAll(HttpServletRequest request) {

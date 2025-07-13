@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try{
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                System.out.println("no valid authorization header");
+                System.out.println("no valid authorization header/ might be logging in");
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -45,13 +45,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             jwtService.validateToken(token);
-            filterChain.doFilter(request, response);
 
             UUID sessionId = jwtService.extractSessionId(token);
             if (!sessionService.isActive(sessionId)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid session or expired");
-                filterChain.doFilter(request, response);
                 return;
             }
 
@@ -64,12 +62,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             );
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
+            filterChain.doFilter(request, response);
             System.out.println("User added to SecurityContext: " + email);
             String zoneIdStr = jwtService.extractClaim(token, claims -> claims.get("zone").toString());
             ZoneContext.set(ZoneId.of(zoneIdStr));
-
             System.out.println("Token: " + token);
-            filterChain.doFilter(request, response);
+
         }finally{
             ZoneContext.clear();
         }
