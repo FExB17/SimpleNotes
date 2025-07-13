@@ -45,7 +45,7 @@ Dieses Projekt dient als Lernumgebung für moderne Backend-Entwicklung mit Java.
 
 ```bash
 git clone https://github.com/FExB17/simplenotes.git
-cd simplenotes-backend
+cd simplenotes
 # application.properties anpassen
 mvn clean install
 mvn spring-boot:run
