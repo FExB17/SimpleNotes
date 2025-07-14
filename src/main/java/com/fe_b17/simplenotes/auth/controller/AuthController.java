@@ -1,0 +1,57 @@
+package com.fe_b17.simplenotes.auth.controller;
+
+import com.fe_b17.simplenotes.auth.dto.AuthResponse;
+import com.fe_b17.simplenotes.auth.dto.LoginRequest;
+import com.fe_b17.simplenotes.auth.dto.RefreshResponse;
+import com.fe_b17.simplenotes.auth.dto.RegisterRequest;
+import com.fe_b17.simplenotes.auth.service.AuthService;
+import com.fe_b17.simplenotes.session.dto.RefreshRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest dto, HttpServletRequest request) {
+        AuthResponse response = authService.registerUser(dto, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest dto, HttpServletRequest request) {
+        return ResponseEntity.ok(authService.login(dto, request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        authService.logout(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(HttpServletRequest request) {
+        authService.logoutAll(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshResponse> refreshToken(@RequestBody RefreshRequest request){
+        return ResponseEntity.ok(authService.refreshAccessToken(request));
+    }
+
+    @PostMapping("/logout-device/{refreshTokenId}")
+    public ResponseEntity<Void> logoutDevice(@PathVariable UUID refreshTokenId) {
+        authService.logoutDevice(refreshTokenId);
+        return ResponseEntity.noContent().build();
+    }
+}

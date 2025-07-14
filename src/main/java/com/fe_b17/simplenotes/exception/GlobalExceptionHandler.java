@@ -1,7 +1,7 @@
 package com.fe_b17.simplenotes.exception;
 
-import com.fe_b17.simplenotes.dto.ErrorResponse;
-import com.fe_b17.simplenotes.dto.ValidationErrorResponse;
+import com.fe_b17.simplenotes.exception.dto.ErrorResponse;
+import com.fe_b17.simplenotes.exception.dto.ValidationErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

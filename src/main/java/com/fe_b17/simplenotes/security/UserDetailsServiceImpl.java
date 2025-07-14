@@ -1,7 +1,7 @@
 package com.fe_b17.simplenotes.security;
 
-import com.fe_b17.simplenotes.models.UserPrincipal;
-import com.fe_b17.simplenotes.repo.UserRepo;
+import com.fe_b17.simplenotes.user.models.UserPrincipal;
+import com.fe_b17.simplenotes.user.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -11,13 +11,14 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
+
+    private final UserRepo userRepo;
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return userRepo.findByEmail(email)
                 .map(UserPrincipal::new)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
-
-    private final UserRepo userRepo;
 
 }

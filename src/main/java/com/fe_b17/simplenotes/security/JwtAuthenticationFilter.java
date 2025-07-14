@@ -1,8 +1,7 @@
 package com.fe_b17.simplenotes.security;
 
 import com.fe_b17.simplenotes.ZoneContext;
-import com.fe_b17.simplenotes.service.JwtService;
-import com.fe_b17.simplenotes.service.SessionService;
+import com.fe_b17.simplenotes.session.service.SessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
