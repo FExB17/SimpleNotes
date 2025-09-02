@@ -20,6 +20,7 @@ import com.fe_b17.simplenotes.session.repo.RefreshTokenRepo;
 import com.fe_b17.simplenotes.user.repo.UserRepo;
 import com.fe_b17.simplenotes.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -111,6 +112,7 @@ public class AuthService {
         return authHeader.substring("Bearer ".length());
     }
 
+    @Transactional
     public RefreshResponse refreshAccessToken(RefreshRequest refreshRequest) {
         UUID tokenUUID = UUID.fromString(refreshRequest.refreshId());
 
@@ -153,7 +155,6 @@ public class AuthService {
         }
         token.setActive(false);
         sessionService.deactivateSession(token.getSession().getId());
-        token.setActive(false);
         refreshTokenRepo.save(token);
     }
 }

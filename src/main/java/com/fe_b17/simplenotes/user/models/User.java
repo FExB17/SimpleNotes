@@ -35,7 +35,6 @@ public class User {
     )
     private LocalDateTime createdAt;
 
-    //TODO
     public String authProvider;
 
 }
